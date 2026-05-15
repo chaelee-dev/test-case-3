@@ -2,6 +2,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { articlesApi } from '@/api/articles';
 import { useAuth } from '@/auth/AuthContext';
+import { Comments } from '@/components/Comments';
 
 export default function Article() {
   const { slug = '' } = useParams<{ slug: string }>();
@@ -112,7 +113,7 @@ export default function Article() {
           ))}
         </ul>
         <hr className="my-lg border-muted" />
-        <div className="text-muted">Comments section lands in Issue #14.</div>
+        <Comments slug={article.slug} />
       </section>
     </main>
   );
