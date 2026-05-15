@@ -1,9 +1,16 @@
-import express, { type Request, type Response, type NextFunction } from 'express';
+import express, { type Request, type Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import { makeAuthRouter } from './modules/auth/auth.routes.js';
+import { errorMapper } from './errors/mapper.js';
+import { Errors } from './errors/AppError.js';
 
-export function createApp(): express.Express {
+export interface AppOptions {
+  authRouter?: express.Router;
+}
+
+export function createApp(opts: AppOptions = {}): express.Express {
   const app = express();
 
   app.use(helmet());
@@ -22,24 +29,20 @@ export function createApp(): express.Express {
     res.json({ status: 'ok', service: 'conduit', env: process.env.NODE_ENV ?? 'development' });
   });
 
+  app.use('/api', opts.authRouter ?? makeAuthRouter());
+
   // Future routes mounted by subsequent issues:
-  //   #2 /api/users, /api/user
   //   #4 /api/profiles
   //   #7 /api/articles, /api/tags
   //   #13 /api/articles/:slug/comments
   //   #15 /api/articles/:slug/favorite
   //   #17 /api/articles/feed
 
-  app.use((_req: Request, res: Response) => {
-    res.status(404).json({ errors: { resource: ['not found'] } });
+  app.use((_req, _res, next) => {
+    next(Errors.notFound('resource'));
   });
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-    // eslint-disable-next-line no-console
-    console.error('[error]', err.message);
-    res.status(500).json({ errors: { server: ['internal error'] } });
-  });
+  app.use(errorMapper);
 
   return app;
 }
