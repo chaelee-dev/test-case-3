@@ -1,33 +1,12 @@
 import { Routes, Route, Link } from 'react-router-dom';
-import { AuthProvider, useAuth } from '@/auth/AuthContext';
+import { AuthProvider } from '@/auth/AuthContext';
 import { Navbar } from '@/components/Navbar';
+import Home from '@/pages/Home';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import Settings from '@/pages/Settings';
 import Profile from '@/pages/Profile';
 import Editor from '@/pages/Editor';
-
-function Home() {
-  const { user } = useAuth();
-  return (
-    <main>
-      <header className="bg-primary px-lg py-xl text-center text-white shadow">
-        <h1 className="font-logo text-5xl drop-shadow">conduit</h1>
-        <p className="text-lg">A place to share your knowledge.</p>
-      </header>
-      <section className="mx-auto max-w-container px-md py-lg">
-        {user ? (
-          <p>Welcome back, <strong>{user.username}</strong>. Feed and editor land in subsequent issues.</p>
-        ) : (
-          <p className="text-secondary">
-            <Link to="/login" className="text-info">Sign in</Link> or{' '}
-            <Link to="/register" className="text-info">create an account</Link> to get started.
-          </p>
-        )}
-      </section>
-    </main>
-  );
-}
 
 function Stub({ name }: { name: string }) {
   return (
