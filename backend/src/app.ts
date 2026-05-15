@@ -7,6 +7,7 @@ import { makeProfileRouter } from './modules/profile/profile.routes.js';
 import { makeArticleRouter } from './modules/article/article.routes.js';
 import { makeTagRouter } from './modules/tag/tag.routes.js';
 import { makeCommentRouter } from './modules/comment/comment.routes.js';
+import { makeFavoriteRouter } from './modules/favorite/favorite.routes.js';
 import { errorMapper } from './errors/mapper.js';
 import { Errors } from './errors/AppError.js';
 
@@ -16,6 +17,7 @@ export interface AppOptions {
   articleRouter?: express.Router;
   tagRouter?: express.Router;
   commentRouter?: express.Router;
+  favoriteRouter?: express.Router;
 }
 
 export function createApp(opts: AppOptions = {}): express.Express {
@@ -42,6 +44,7 @@ export function createApp(opts: AppOptions = {}): express.Express {
   app.use('/api', opts.articleRouter ?? makeArticleRouter());
   app.use('/api', opts.tagRouter ?? makeTagRouter());
   app.use('/api', opts.commentRouter ?? makeCommentRouter());
+  app.use('/api', opts.favoriteRouter ?? makeFavoriteRouter());
 
   // Future routes mounted by subsequent issues:
   //   #13 /api/articles/:slug/comments
