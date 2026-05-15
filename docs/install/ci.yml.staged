@@ -1,0 +1,103 @@
+name: CI
+
+# STAGED — move this file to .github/workflows/ci.yml after refreshing gh CLI token with `workflow` scope:
+#   gh auth refresh -s workflow
+# Then: git mv docs/install/ci.yml.staged .github/workflows/ci.yml && git commit && git push
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    name: typecheck + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @conduit/backend prisma:generate
+      - run: pnpm typecheck
+      - run: pnpm test
+
+  local-md-sync:
+    name: LOCAL.md ↔ 12-scaffolding §7 sync
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash scripts/check-local-md-sync.sh
+
+  boot-smoke:
+    name: 3-profile boot smoke (ADR-0037)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [dev, stg, prod]
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: conduit
+          POSTGRES_PASSWORD: conduit
+          POSTGRES_DB: conduit_${{ matrix.profile }}
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U conduit"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - name: Prepare env
+        run: |
+          cp .env.${{ matrix.profile }}.example .env.${{ matrix.profile }}
+          sed -i "s|^DATABASE_URL=.*|DATABASE_URL=postgresql://conduit:conduit@localhost:5432/conduit_${{ matrix.profile }}|" .env.${{ matrix.profile }}
+      - run: pnpm --filter @conduit/backend prisma:generate
+      - name: Apply schema
+        env:
+          DATABASE_URL: postgresql://conduit:conduit@localhost:5432/conduit_${{ matrix.profile }}
+        run: pnpm --filter @conduit/backend exec prisma db push --skip-generate
+      - name: Boot backend (profile=${{ matrix.profile }})
+        env:
+          NODE_ENV: ${{ matrix.profile == 'dev' && 'development' || matrix.profile == 'stg' && 'staging' || 'production' }}
+          DATABASE_URL: postgresql://conduit:conduit@localhost:5432/conduit_${{ matrix.profile }}
+          JWT_SECRET: test-secret-for-ci
+          PORT: 3000
+        run: |
+          set -e
+          if [ "${{ matrix.profile }}" = "dev" ]; then
+            pnpm --filter @conduit/backend exec tsx src/server.ts &
+          else
+            pnpm --filter @conduit/backend build
+            node backend/dist/server.js &
+          fi
+          BACKEND_PID=$!
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:3000/api/health >/dev/null 2>&1; then
+              echo "✅ backend ready on profile=${{ matrix.profile }}"
+              kill $BACKEND_PID || true
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "❌ backend did not become ready"
+          kill $BACKEND_PID || true
+          exit 1
