@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { articlesApi } from '@/api/articles';
 import { useAuth } from '@/auth/AuthContext';
 import { Comments } from '@/components/Comments';
+import { FavoriteButton } from '@/components/FavoriteButton';
 
 export default function Article() {
   const { slug = '' } = useParams<{ slug: string }>();
@@ -77,9 +78,7 @@ export default function Article() {
         <button className="rounded border border-secondary px-sm py-xs text-secondary">
           + Follow {article.author.username}
         </button>
-        <button className="rounded border border-primary px-sm py-xs text-primary">
-          ♥ Favorite Article ({article.favoritesCount})
-        </button>
+        <FavoriteButton article={article} variant="full" />
       </div>
     );
   }
