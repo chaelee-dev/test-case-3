@@ -3,11 +3,13 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import { makeAuthRouter } from './modules/auth/auth.routes.js';
+import { makeProfileRouter } from './modules/profile/profile.routes.js';
 import { errorMapper } from './errors/mapper.js';
 import { Errors } from './errors/AppError.js';
 
 export interface AppOptions {
   authRouter?: express.Router;
+  profileRouter?: express.Router;
 }
 
 export function createApp(opts: AppOptions = {}): express.Express {
@@ -30,9 +32,9 @@ export function createApp(opts: AppOptions = {}): express.Express {
   });
 
   app.use('/api', opts.authRouter ?? makeAuthRouter());
+  app.use('/api', opts.profileRouter ?? makeProfileRouter());
 
   // Future routes mounted by subsequent issues:
-  //   #4 /api/profiles
   //   #7 /api/articles, /api/tags
   //   #13 /api/articles/:slug/comments
   //   #15 /api/articles/:slug/favorite
