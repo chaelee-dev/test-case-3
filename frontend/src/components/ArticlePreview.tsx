@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { Article } from '@/api/articles';
+import { FavoriteButton } from '@/components/FavoriteButton';
 
 export function ArticlePreview({ article }: { article: Article }) {
   const date = new Date(article.createdAt).toLocaleDateString(undefined, {
@@ -19,8 +20,8 @@ export function ArticlePreview({ article }: { article: Article }) {
           <span className="text-secondary">{article.author.username}</span>
         </Link>
         <span className="text-xs text-muted">{date}</span>
-        <span className="ml-auto inline-flex items-center gap-xs text-primary">
-          ♥ {article.favoritesCount}
+        <span className="ml-auto">
+          <FavoriteButton article={article} variant="compact" />
         </span>
       </div>
       <Link to={`/article/${article.slug}`}>

@@ -1,10 +1,34 @@
-import { NavLink, useParams, useNavigate, Outlet, useLocation, Link } from 'react-router-dom';
+import { NavLink, useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { profileApi } from '@/api/profile';
+import { articlesApi } from '@/api/articles';
 import { useAuth } from '@/auth/AuthContext';
+import { ArticlePreview } from '@/components/ArticlePreview';
 
 function tabClass({ isActive }: { isActive: boolean }) {
   return `border-b-2 px-md py-sm ${isActive ? 'border-primary text-primary' : 'border-transparent text-muted hover:text-secondary'}`;
+}
+
+function ProfileArticles({ username, favorites }: { username: string; favorites: boolean }) {
+  const query = useQuery({
+    queryKey: ['profile-articles', username, favorites],
+    queryFn: () =>
+      favorites
+        ? articlesApi.list({ favorited: username, limit: 20 })
+        : articlesApi.list({ author: username, limit: 20 }),
+  });
+  if (query.isLoading) return <p className="text-muted">Loading…</p>;
+  if (query.isError) return <p className="text-danger">Couldn’t load articles.</p>;
+  if (!query.data || query.data.articles.length === 0) {
+    return <p className="text-muted">No articles here... yet.</p>;
+  }
+  return (
+    <>
+      {query.data.articles.map((a) => (
+        <ArticlePreview key={a.slug} article={a} />
+      ))}
+    </>
+  );
 }
 
 export default function Profile() {
@@ -97,12 +121,7 @@ export default function Profile() {
             Favorited Articles
           </NavLink>
         </div>
-        <div className="text-muted">
-          {onFavoritesTab
-            ? 'Favorited articles will appear here (Issue #16).'
-            : 'Authored articles will appear here (Issue #10).'}
-        </div>
-        <Outlet />
+        <ProfileArticles username={profile.username} favorites={onFavoritesTab} />
       </section>
     </main>
   );
