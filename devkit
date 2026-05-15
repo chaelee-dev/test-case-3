@@ -1,0 +1,118 @@
+#!/usr/bin/env bash
+# devkit — newProject 빌드·실행 단일 진입점 (ADR-0028)
+#
+# 사용:
+#   ./devkit install [frontend|backend|all]
+#   ./devkit build   [frontend|backend|all]
+#   ./devkit test    [frontend|backend|all]
+#   ./devkit dev     [frontend|backend]
+#   ./devkit e2e
+#   ./devkit help
+#
+# 명령 정본: devtoolkit.config.yaml `commands.*` (단일 정본, ADR-0028)
+# yq (mikefarah/yq v4+) 있으면 사용, 없으면 awk fallback.
+#
+# /implement Phase도 본 진입점을 호출. 3-fallback lookup 폐기 (ADR-0027 부분 supersede).
+
+set -eu
+
+CMD="${1:-help}"
+TARGET="${2:-all}"
+
+CONFIG="devtoolkit.config.yaml"
+[ ! -f "$CONFIG" ] && { echo "[ERROR] $CONFIG 부재. newProject 루트에서 실행하세요." >&2; exit 2; }
+
+have_yq() { command -v yq >/dev/null 2>&1; }
+
+# yaml lookup — 경로 예: "frontend.build", "e2e"
+lookup() {
+  local path="$1"
+  if have_yq; then
+    local v
+    v=$(yq ".commands.$path // \"\"" "$CONFIG" 2>/dev/null)
+    [ "$v" = "null" ] && v=""
+    echo "$v"
+  else
+    # awk fallback (depth ≤ 2)
+    if echo "$path" | grep -q '\.'; then
+      local area="${path%%.*}" key="${path#*.}"
+      awk -v area="$area" -v key="$key" '
+        /^commands:/ { in_cmd=1; next }
+        in_cmd && /^[a-zA-Z_]+:/ && !/^  / { in_cmd=0 }
+        in_cmd && match($0, "^  " area ":[ ]*$") { in_area=1; next }
+        in_cmd && in_area && /^  [a-zA-Z_]+:/ { in_area=0 }
+        in_area && match($0, "^    " key ":") {
+          sub("^[ ]*" key ":[ ]*", "")
+          gsub("^\"|\"$", "")
+          gsub("[ ]*#.*$", "")
+          print
+          exit
+        }
+      ' "$CONFIG"
+    else
+      awk -v key="$path" '
+        /^commands:/ { in_cmd=1; next }
+        in_cmd && /^[a-zA-Z_]+:/ && !/^  / { in_cmd=0 }
+        in_cmd && match($0, "^  " key ":") {
+          sub("^[ ]*" key ":[ ]*", "")
+          gsub("^\"|\"$", "")
+          gsub("[ ]*#.*$", "")
+          print
+          exit
+        }
+      ' "$CONFIG"
+    fi
+  fi
+}
+
+run() {
+  local cmd="$1" label="$2"
+  if [ -z "$cmd" ]; then
+    echo "  skip: $label (devtoolkit.config.yaml commands.${label//\./_} 비어있음)"
+    return 0
+  fi
+  echo "→ [$label] $cmd"
+  eval "$cmd"
+}
+
+dispatch_area() {
+  local verb="$1"  # build|test|install
+  if [ "$TARGET" = "all" ] || [ "$TARGET" = "frontend" ]; then
+    run "$(lookup "frontend.$verb")" "frontend.$verb"
+  fi
+  if [ "$TARGET" = "all" ] || [ "$TARGET" = "backend" ]; then
+    run "$(lookup "backend.$verb")" "backend.$verb"
+  fi
+}
+
+case "$CMD" in
+  install) dispatch_area install ;;
+  build)   dispatch_area build ;;
+  test)    dispatch_area test ;;
+  dev)
+    case "$TARGET" in
+      frontend) run "$(lookup frontend.dev)" "frontend.dev" ;;
+      backend)  run "$(lookup backend.run)"  "backend.run" ;;
+      all|*)    echo "사용: $0 dev [frontend|backend]" >&2; exit 2 ;;
+    esac
+    ;;
+  e2e)     run "$(lookup e2e)" "e2e" ;;
+  help|--help|-h|*)
+    cat <<EOF
+devkit — newProject 빌드·실행 단일 진입점 (ADR-0028)
+
+사용: $0 <command> [target]
+
+Commands:
+  install [frontend|backend|all]   의존성 설치 (기본 all)
+  build   [frontend|backend|all]   빌드
+  test    [frontend|backend|all]   테스트
+  dev      frontend|backend        dev 서버 (frontend.dev | backend.run)
+  e2e                               E2E 테스트
+  help                              본 도움말
+
+명령 정본: ./devtoolkit.config.yaml \`commands.*\`
+LLM(/implement)도 본 진입점을 호출합니다. 3-fallback lookup은 폐기 (ADR-0028).
+EOF
+    ;;
+esac
