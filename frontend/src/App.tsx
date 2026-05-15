@@ -7,6 +7,7 @@ import Register from '@/pages/Register';
 import Settings from '@/pages/Settings';
 import Profile from '@/pages/Profile';
 import Editor from '@/pages/Editor';
+import Article from '@/pages/Article';
 
 function Stub({ name }: { name: string }) {
   return (
@@ -29,7 +30,7 @@ export default function App() {
         <Route path="/settings" element={<Settings />} />
         <Route path="/editor" element={<Editor />} />
         <Route path="/editor/:slug" element={<Editor />} />
-        <Route path="/article/:slug" element={<Stub name="Article" />} />
+        <Route path="/article/:slug" element={<Article />} />
         <Route path="/profile/:username" element={<Profile />} />
         <Route path="/profile/:username/favorites" element={<Profile />} />
         <Route path="*" element={<Stub name="404" />} />
