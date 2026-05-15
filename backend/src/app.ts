@@ -5,6 +5,7 @@ import morgan from 'morgan';
 import { makeAuthRouter } from './modules/auth/auth.routes.js';
 import { makeProfileRouter } from './modules/profile/profile.routes.js';
 import { makeArticleRouter } from './modules/article/article.routes.js';
+import { makeTagRouter } from './modules/tag/tag.routes.js';
 import { errorMapper } from './errors/mapper.js';
 import { Errors } from './errors/AppError.js';
 
@@ -12,6 +13,7 @@ export interface AppOptions {
   authRouter?: express.Router;
   profileRouter?: express.Router;
   articleRouter?: express.Router;
+  tagRouter?: express.Router;
 }
 
 export function createApp(opts: AppOptions = {}): express.Express {
@@ -36,6 +38,7 @@ export function createApp(opts: AppOptions = {}): express.Express {
   app.use('/api', opts.authRouter ?? makeAuthRouter());
   app.use('/api', opts.profileRouter ?? makeProfileRouter());
   app.use('/api', opts.articleRouter ?? makeArticleRouter());
+  app.use('/api', opts.tagRouter ?? makeTagRouter());
 
   // Future routes mounted by subsequent issues:
   //   #13 /api/articles/:slug/comments
