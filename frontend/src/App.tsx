@@ -4,6 +4,7 @@ import { Navbar } from '@/components/Navbar';
 import Login from '@/pages/Login';
 import Register from '@/pages/Register';
 import Settings from '@/pages/Settings';
+import Profile from '@/pages/Profile';
 
 function Home() {
   const { user } = useAuth();
@@ -49,8 +50,8 @@ export default function App() {
         <Route path="/editor" element={<Stub name="Editor" />} />
         <Route path="/editor/:slug" element={<Stub name="Editor (edit)" />} />
         <Route path="/article/:slug" element={<Stub name="Article" />} />
-        <Route path="/profile/:username" element={<Stub name="Profile" />} />
-        <Route path="/profile/:username/favorites" element={<Stub name="Profile favorites" />} />
+        <Route path="/profile/:username" element={<Profile />} />
+        <Route path="/profile/:username/favorites" element={<Profile />} />
         <Route path="*" element={<Stub name="404" />} />
       </Routes>
     </AuthProvider>
