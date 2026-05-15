@@ -1,0 +1,111 @@
+// Conduit (RealWorld) — Prisma schema
+// 08 LLD §1 도메인 모델: User, Article, Tag, ArticleTag, Favorite, Follow, Comment
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int       @id @default(autoincrement())
+  email        String    @unique
+  username     String    @unique
+  passwordHash String    @map("password_hash")
+  bio          String?
+  image        String?
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  articles  Article[]
+  comments  Comment[]
+  favorites Favorite[]
+  following Follow[]   @relation("UserFollowing")
+  followers Follow[]   @relation("UserFollowers")
+
+  @@map("users")
+}
+
+model Article {
+  id              Int       @id @default(autoincrement())
+  slug            String    @unique
+  title           String
+  description     String
+  body            String
+  favoritesCount  Int       @default(0) @map("favorites_count")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  authorId Int  @map("author_id")
+  author   User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  tags      ArticleTag[]
+  comments  Comment[]
+  favorites Favorite[]
+
+  @@index([authorId])
+  @@map("articles")
+}
+
+model Tag {
+  id   Int    @id @default(autoincrement())
+  name String @unique
+
+  articles ArticleTag[]
+
+  @@map("tags")
+}
+
+model ArticleTag {
+  articleId Int @map("article_id")
+  tagId     Int @map("tag_id")
+
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([articleId, tagId])
+  @@index([tagId])
+  @@map("article_tags")
+}
+
+model Favorite {
+  userId    Int @map("user_id")
+  articleId Int @map("article_id")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, articleId])
+  @@index([articleId])
+  @@map("favorites")
+}
+
+model Follow {
+  followerId  Int @map("follower_id")
+  followingId Int @map("following_id")
+
+  follower  User @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followingId])
+  @@index([followingId])
+  @@map("follows")
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement())
+  body      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  articleId Int     @map("article_id")
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  authorId  Int     @map("author_id")
+  author    User    @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([articleId])
+  @@map("comments")
+}

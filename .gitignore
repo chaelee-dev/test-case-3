@@ -74,3 +74,23 @@ service-account*.json
 .claude/skills/setup-deploy
 .claude/skills/ship
 .claude/skills/unfreeze
+
+# ========================================
+# Conduit project — newProject 추가 (Issue #1)
+# ========================================
+node_modules/
+dist/
+build/
+coverage/
+.next/
+.cache/
+
+# vite/playwright artifacts
+.vite/
+playwright-report/
+test-results/
+
+# whitelist 3 profile env templates (.env.* deny rule above blocks them otherwise)
+!.env.dev.example
+!.env.stg.example
+!.env.prod.example
