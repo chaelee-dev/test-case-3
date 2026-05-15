@@ -1,6 +1,7 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { articlesApi } from '@/api/articles';
+import { profileApi } from '@/api/profile';
 import { useAuth } from '@/auth/AuthContext';
 import { Comments } from '@/components/Comments';
 import { FavoriteButton } from '@/components/FavoriteButton';
@@ -22,6 +23,27 @@ export default function Article() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['articles'] });
       navigate('/');
+    },
+  });
+
+  const followMut = useMutation({
+    mutationFn: ({ next, username }: { next: boolean; username: string }) =>
+      next ? profileApi.follow(username) : profileApi.unfollow(username),
+    onSuccess: (r) => {
+      const existing = queryClient.getQueryData<{ article: { author: { following: boolean } } }>([
+        'article',
+        slug,
+      ]);
+      if (existing) {
+        queryClient.setQueryData(['article', slug], {
+          article: {
+            ...existing.article,
+            author: { ...existing.article.author, following: r.profile.following },
+          },
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+      queryClient.invalidateQueries({ queryKey: ['articles'] });
     },
   });
 
@@ -75,8 +97,19 @@ export default function Article() {
     }
     return (
       <div className="flex gap-sm text-sm">
-        <button className="rounded border border-secondary px-sm py-xs text-secondary">
-          + Follow {article.author.username}
+        <button
+          onClick={() => followMut.mutate({ next: !article.author.following, username: article.author.username })}
+          disabled={followMut.isPending}
+          className={`rounded px-sm py-xs ${
+            article.author.following
+              ? 'bg-secondary text-white'
+              : 'border border-secondary text-secondary hover:bg-secondary hover:text-white'
+          }`}
+          aria-pressed={article.author.following}
+        >
+          {article.author.following
+            ? `✓ Following ${article.author.username}`
+            : `+ Follow ${article.author.username}`}
         </button>
         <FavoriteButton article={article} variant="full" />
       </div>

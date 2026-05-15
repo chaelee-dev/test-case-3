@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { articlesApi, tagsApi } from '@/api/articles';
 import { useAuth } from '@/auth/AuthContext';
@@ -9,8 +9,15 @@ const PAGE_SIZE = 10;
 type Tab = 'feed' | 'global' | 'tag';
 
 export default function Home() {
-  const { user } = useAuth();
-  const [tab, setTab] = useState<Tab>(user ? 'feed' : 'global');
+  const { user, loading } = useAuth();
+  const [tab, setTab] = useState<Tab>('global');
+  const [tabInitialized, setTabInitialized] = useState(false);
+
+  useEffect(() => {
+    if (loading || tabInitialized) return;
+    setTab(user ? 'feed' : 'global');
+    setTabInitialized(true);
+  }, [loading, user, tabInitialized]);
   const [tag, setTag] = useState<string | null>(null);
   const [page, setPage] = useState(0);
 
