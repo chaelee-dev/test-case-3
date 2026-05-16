@@ -103,19 +103,19 @@ conventions:
 # ============================================================
 commands:
   frontend:
-    install: ""                        # 예: "npm install" | "bun install" | "yarn"
-    build: ""                          # 예: "npm run build" | "vite build"
-    test: ""                           # 예: "npm test" | "vitest run"
-    dev: ""                            # 예: "npm run dev" | "vite"
-    lint: ""                           # 예: "npm run lint" | "eslint ."
-    typecheck: ""                      # 예: "tsc --noEmit"
+    install: "pnpm install"
+    build: "pnpm --filter @conduit/frontend build"
+    test: "pnpm --filter @conduit/frontend test"
+    dev: "pnpm --filter @conduit/frontend dev"
+    lint: "pnpm --filter @conduit/frontend lint"
+    typecheck: "pnpm --filter @conduit/frontend typecheck"
   backend:
-    install: ""                        # 예: "./gradlew build -x test" | "pip install -r requirements.txt"
-    build: ""                          # 예: "./gradlew build" | "mvn package"
-    test: ""                           # 예: "./gradlew test" | "pytest"
-    run: ""                            # 예: "./gradlew bootRun" | "uvicorn app:app"
-    lint: ""                           # 예: "./gradlew check"
-  e2e: ""                              # 예: "npx playwright test"
+    install: "pnpm install"
+    build: "pnpm --filter @conduit/backend build"
+    test: "pnpm --filter @conduit/backend test"
+    run: "pnpm --filter @conduit/backend dev"
+    lint: "pnpm --filter @conduit/backend lint"
+  e2e: "pnpm --filter @conduit/frontend exec playwright test"
 
 collaboration:
   vcs: "github"                        # 필수

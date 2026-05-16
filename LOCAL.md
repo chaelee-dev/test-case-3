@@ -11,6 +11,7 @@
 | Version | Date | Author | Change |
 |---|---|---|---|
 | v0.1 | 2026-05-15 | yongtae.cho@bespinglobal.com | 초안 — 12-scaffolding/typescript.md §7 작성과 함께 첫 채움 (ADR-0040) |
+| v0.2 | 2026-05-16 | yongtae.cho@bespinglobal.com | §2 단계 5 prisma:push:dev, §3.1~3.3 dotenv-cli 동치, §4 표 + §5.3 troubleshooting 갱신 (PR #37 후속 hotfix) |
 
 ---
 
@@ -67,12 +68,14 @@ pnpm seed:dev
 
 ```bash
 # backend (3000)
-./devkit dev backend
-# 동치: NODE_ENV=development pnpm --filter @conduit/backend dev   # tsx watch
+pnpm dev:backend
+# 동치: pnpm --filter @conduit/backend dev
+#       → dotenv-cli가 ../.env.dev 로드 후 tsx watch src/server.ts
+# (./devkit dev backend 도 동일 — devtoolkit.config.yaml commands.backend.run이 위 명령으로 매핑)
 
 # frontend (5173, 별 터미널)
-./devkit dev frontend
-# 동치: pnpm --filter @conduit/frontend dev                       # vite
+pnpm dev:frontend
+# 동치: pnpm --filter @conduit/frontend dev    # vite (.env.dev의 VITE_API_BASE_URL 사용)
 ```
 
 - 기대 출력: `:3000 listening` (backend), `Local: http://localhost:5173/` (frontend)
@@ -84,11 +87,11 @@ pnpm seed:dev
 
 ```bash
 # 빌드 → 실행
-./devkit build all
+pnpm build
 pnpm start:stg
 # 동치:
-#   NODE_ENV=staging node backend/dist/server.js   # backend
-#   pnpm --filter @conduit/frontend exec serve dist   # frontend 정적 (포트 4173)
+#   pnpm --filter @conduit/backend start:stg    # dotenv -e ../.env.stg -- node dist/server.js
+#   pnpm --filter @conduit/frontend exec vite preview --port 4173   # frontend 정적 (4173)
 ```
 
 - 기대 출력: `:3000 listening` (backend), `Accepting connections at http://localhost:4173` (frontend)
@@ -99,11 +102,11 @@ pnpm start:stg
 ### 3.3 prod profile (로컬에서 prod 환경 흉내)
 
 ```bash
-./devkit build all
+pnpm build
 pnpm start:prod
 # 동치:
-#   NODE_ENV=production node backend/dist/server.js
-#   pnpm --filter @conduit/frontend exec serve dist
+#   pnpm --filter @conduit/backend start:prod   # dotenv -e ../.env.prod -- node dist/server.js
+#   pnpm --filter @conduit/frontend exec vite preview --port 4173
 ```
 
 - 기대 출력: `:3000 listening`, `Accepting connections at http://localhost:4173`
@@ -119,10 +122,11 @@ pnpm start:prod
 
 | 자산 | 경로 | 변경 trigger | 갱신 책임 |
 |---|---|---|---|
-| 환경 변수 템플릿 | `.env.dev.example`·`.env.stg.example`·`.env.prod.example` | 새 env 키 추가 또는 값 분리 | 변수를 도입한 이슈 |
-| DB migrations | `backend/prisma/migrations/` | `backend/prisma/schema.prisma` 변경 | 모델 변경 이슈 |
+| 환경 변수 템플릿 | `.env.dev.example`·`.env.stg.example`·`.env.prod.example` (root) | 새 env 키 추가 또는 값 분리 | 변수를 도입한 이슈 |
+| 스키마 push (dev) | `backend/package.json scripts.prisma:push:dev` (dotenv-cli + `prisma db push`) | `backend/prisma/schema.prisma` 변경 | 모델 변경 이슈 |
+| DB migrations (stg/prod) | `backend/prisma/migrations/` (정식 흐름 시 `pnpm migrate:init`로 최초 생성) | 운영 환경 release 직전 | 운영 release 이슈 |
 | lockfile | `pnpm-lock.yaml` | 의존성 추가/upgrade | 의존성 도입 이슈 |
-| 설치/seed scripts | `package.json scripts.{setup,migrate,seed:dev,seed:stg,seed:prod}` + `backend/prisma/seed.ts` | seed 데이터 변경 | seed 변경 이슈 |
+| 설치/seed scripts | `package.json scripts.{setup,prisma:push:dev,migrate,migrate:init,seed:dev,seed:stg,seed:prod}` + `backend/prisma/seed.ts` (모두 dotenv-cli로 profile env 로드) | seed/스크립트 변경 | seed 변경 이슈 |
 | 부팅 명령 | 본 LOCAL.md §3 + `package.json scripts.{dev:*,start:*}` | 명령·시그널·포트 변경 | 명령 변경 이슈 |
 | 컨테이너 정의 | `docker-compose.yml`(dev DB), `backend/Dockerfile`, `frontend/Dockerfile` | infra 변경 | infra 이슈 |
 
@@ -149,7 +153,9 @@ lsof -i :5432          # postgres
 
 - DB 컨테이너 실행 여부: `docker compose ps`
 - profile별 DB URL 일치 여부: `.env.{dev,stg,prod}` 안의 `DATABASE_URL`
-- migration 미적용: `pnpm --filter @conduit/backend prisma:migrate`
+- 스키마 미적용 (dev): `pnpm prisma:push:dev` (또는 정식 흐름 `pnpm migrate:init` — 최초 1회)
+- stg/prod 미적용: `pnpm migrate` (= `prisma migrate deploy`, 기존 migration 파일만 적용)
+- 모든 스크립트가 dotenv-cli로 root `.env.{profile}`을 로드하므로 backend cwd에서 직접 `npx prisma`를 호출하면 `DATABASE_URL` 누락 에러가 납니다. 항상 `pnpm <script>` 형태로 호출하세요.
 
 ### 5.4 JWT 검증 실패 (401 무한 루프)
 
