@@ -47,12 +47,14 @@ cp .env.prod.example .env.prod
 docker compose up -d postgres
 # → localhost:5432/conduit_dev 가동
 
-# 5) DB 마이그레이션 (dev profile 기준)
-pnpm --filter @conduit/backend prisma:migrate
-# 동치: cd backend && npx prisma migrate deploy
+# 5) DB 스키마 적용 (dev profile, 최초 1회)
+pnpm prisma:push:dev
+# → schema.prisma → DB로 push (migration 파일 불필요, dev iteration용)
+# 정식 migration 흐름을 원하면: pnpm migrate:init  (init migration 생성 + 적용)
+# stg/prod에선 pnpm migrate (migrate deploy)로 기존 migration 파일만 적용
 
 # 6) seed 데이터 (dev profile)
-pnpm --filter @conduit/backend seed:dev
+pnpm seed:dev
 ```
 
 ---
